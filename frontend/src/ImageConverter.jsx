@@ -249,6 +249,57 @@ function ImageConverter({ onHome, initialFiles }) {
     setMessage('JPG download complete!');
   };
 
+  const downloadAppStoreScreenshots = async () => {
+    if (!images.length) return;
+    const targets = images;
+    const appStoreWidth = 1242;
+    const appStoreHeight = 2688;
+
+    if (targets.length > 1) {
+      const zip = new JSZip();
+      for (let i = 0; i < targets.length; i++) {
+        const img = targets[i];
+        await drawImageToCanvas(img.src, appStoreWidth, appStoreHeight);
+        const canvas = canvasRef.current;
+        await new Promise((res) => {
+          canvas.toBlob(async (blob) => {
+            if (!blob) return res();
+            const buf = await blob.arrayBuffer();
+            const suffix = String(i + 1).padStart(2, '0');
+            zip.file(`iOS_Screen-${suffix}.jpg`, buf);
+            res();
+          }, 'image/jpeg');
+        });
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'iOS_App_Store_Screenshots.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      const img = targets[0];
+      await drawImageToCanvas(img.src, appStoreWidth, appStoreHeight);
+      const canvas = canvasRef.current;
+      await new Promise((res) => {
+        canvas.toBlob((blob) => {
+          if (!blob) return res();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'iOS_Screen-01.jpg';
+          a.click();
+          URL.revokeObjectURL(url);
+          res();
+        }, 'image/jpeg');
+      });
+    }
+    setMessage('iOS App Store screenshots ready!');
+  };
+
 
   const generateSVGCode = async () => {
     if (!images.length) return;
@@ -451,6 +502,7 @@ function ImageConverter({ onHome, initialFiles }) {
             <button onClick={() => applyPreset(512, 512)}>512x512</button>
             <button onClick={() => applyPreset(196, 196)}>196x196</button>
             <button onClick={() => applyPreset(64, 64)}>64x64</button>
+            <button onClick={() => applyPreset(1242, 2688)}>iOS App Store 1242x2688</button>
           </div>
           <div className="preview-stack">
             {images.map((img, idx) => {
@@ -499,6 +551,7 @@ function ImageConverter({ onHome, initialFiles }) {
           <div className="buttons">
             <button onClick={downloadPNG}>Download PNG</button>
             <button onClick={downloadJPG}>Download JPG</button>
+            <button onClick={downloadAppStoreScreenshots}>Download iOS App Store JPGs</button>
             <button onClick={downloadICO}>Download ICO</button>
             <button onClick={downloadPDF}>Download PDF</button>
             <button onClick={downloadReactAssets}>Download React Assets</button>
